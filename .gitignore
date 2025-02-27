@@ -1,0 +1,210 @@
+# Advanced USB Rubber Ducky Project .gitignore
+
+#------------------------------------------------------------
+# Build directories and artifacts
+#------------------------------------------------------------
+build/
+_build/
+cmake-build-*/
+out/
+.cache/
+compile_commands.json
+output.map
+*.bin
+*.elf
+*.hex
+*.list
+*.map
+*.out
+
+#------------------------------------------------------------
+# CMake generated files
+#------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+install_manifest.txt
+.cmake/
+*Config*.cmake
+*Targets*.cmake
+
+#------------------------------------------------------------
+# Object files and libraries
+#------------------------------------------------------------
+*.o
+*.ko
+*.obj
+*.so
+*.so.*
+*.dylib
+*.a
+*.la
+*.lo
+*.lib
+*.dll
+*.exe
+
+#------------------------------------------------------------
+# Dependency directories and files
+#------------------------------------------------------------
+vendor/*/
+!vendor/ch569/
+!vendor/*/include/
+dependencies/
+node_modules/
+.venv/
+venv/
+
+#------------------------------------------------------------
+# Log files and temporary files
+#------------------------------------------------------------
+*.log
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.bak
+*~
+
+#------------------------------------------------------------
+# IDE/Editor-specific files
+#------------------------------------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.suo
+*.user
+*.userosscache
+*.dbmdl
+*.db
+*.VC.db
+*.VC.opendb
+
+# Eclipse
+.project
+.cproject
+.settings/
+.classpath
+.metadata/
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+*.iws
+out/
+.idea_modules/
+cmake-build-*/
+
+# Qt Creator
+CMakeLists.txt.user
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+
+#------------------------------------------------------------
+# Rust-specific
+#------------------------------------------------------------
+/target/
+Cargo.lock
+**/*.rs.bk
+
+#------------------------------------------------------------
+# ESP-IDF specific
+#------------------------------------------------------------
+sdkconfig
+sdkconfig.old
+build/
+components/
+managed_components/
+dependencies.lock
+.cproject/
+.devcontainer/
+.pio/
+.vscode/
+
+#------------------------------------------------------------
+# Python
+#------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+#------------------------------------------------------------
+# macOS specific
+#------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+#------------------------------------------------------------
+# Windows specific
+#------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+#------------------------------------------------------------
+# Linux specific
+#------------------------------------------------------------
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+#------------------------------------------------------------
+# Project specific
+#------------------------------------------------------------
+# Generated payload directories
+payloads/
+# Flash command logs
+flash_log.txt
+# Custom development scripts
+dev_*.sh
+# Generated documentation
+docs/html/
+docs/latex/
+
+# Keep all vendor header files
+!vendor/*/include/**/*.h
