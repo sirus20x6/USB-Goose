@@ -32,6 +32,8 @@ set(ESP32C6_SOURCES
     src/security/crypto.c
     src/security/secure_storage.c
     src/esp32c6_os_detect.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/comm/spi_master.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/wireless/wifi.c
 )
 
 # Create the main component

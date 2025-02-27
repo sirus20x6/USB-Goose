@@ -141,6 +141,31 @@ static void send_mouse_report(void) {
 
 // Keyboard implementation
 
+bool keyboard_init(void) {
+    // Clear the keyboard report
+    memset(keyboard_report, 0, KEYBOARD_REPORT_SIZE);
+    
+    // Set up the Keyboard API structure
+    KeyboardHID.press = keyboard_press;
+    KeyboardHID.release = keyboard_release;
+    KeyboardHID.tap = keyboard_tap;
+    KeyboardHID.pressModifier = keyboard_press_modifier;
+    KeyboardHID.releaseModifier = keyboard_release_modifier;
+    KeyboardHID.tapWithModifiers = keyboard_tap_with_modifiers;
+    KeyboardHID.type = keyboard_type;
+    KeyboardHID.sendString = keyboard_send_string;
+    KeyboardHID.sendLine = keyboard_send_line;
+    KeyboardHID.sendWinKey = keyboard_send_win_key;
+    KeyboardHID.sendCommandKey = keyboard_send_command_key;
+    KeyboardHID.sendCtrlKey = keyboard_send_ctrl_key;
+    KeyboardHID.delay = keyboard_delay;
+    KeyboardHID.beginBuffer = keyboard_begin_buffer;
+    KeyboardHID.sendBuffer = keyboard_send_buffer;
+    KeyboardHID.clearBuffer = keyboard_clear_buffer;
+    
+    return true;
+}
+
 static void keyboard_press(KeyCode key) {
     // Find an empty slot in the keyboard report
     for (int i = 2; i < KEYBOARD_REPORT_SIZE; i++) {

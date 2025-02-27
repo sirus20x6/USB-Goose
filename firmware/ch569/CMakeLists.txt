@@ -30,6 +30,7 @@ set(CH569_SOURCES
     src/comm/spi_slave.c
     src/hardware/leds.c
     src/hardware/rtc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/comm/spi_slave.c
 )
 
 # Include vendor-specific files if they exist
