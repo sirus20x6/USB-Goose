@@ -57,7 +57,7 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 - **Simultaneous Operation**: Run multiple protocols concurrently
 
 ### ✅ Unified LLVM Development Framework
-- **Language Flexibility**: C, C++, Rust, and other LLVM languages
+- **Language Flexibility**: C, C++, Rust, Python, and other LLVM languages
 - **Cross-Chip Framework**: Same languages for both processors
 - **Shared Codebase**: Common libraries across the system
 - **Modern Practices**: Use contemporary language features
@@ -198,6 +198,8 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
  │   │   └── wifi_recon.rs     # Rust example
  │   ├── combined_payloads/    # Multi-vector payloads
  │   │   └── exfiltration.cpp  # C++ example
+ │   ├── python_payloads/      # Python payloads
+ │   │   └── os_detect.py      # Python example
  │   └── CMakeLists.txt        # Build config for examples
  │
  ├── tools/                    # Development tools
@@ -210,6 +212,10 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
  │   │   ├── main.cpp
  │   │   ├── usb_sim.cpp
  │   │   └── wireless_sim.cpp
+ │   ├── pythran/              # Python-to-C compiler tools
+ │   │   ├── compile.py        # Pythran compiler wrapper
+ │   │   ├── bindings.cpp      # C bindings for Python
+ │   │   └── templates/        # Code templates
  │   ├── flashers/             # Programming utilities
  │   │   ├── wch-flasher.py    # CH569 flasher
  │   │   ├── dual_flasher.cpp  # Combined flasher
@@ -303,6 +309,169 @@ void payload_main(PayloadContext* ctx) {
   }
 }
 ```
+
+## Python Payload Support
+
+The project supports writing payloads in Python through Pythran, a Python-to-C++ compiler that leverages LLVM. This allows you to write your payload logic in high-level Python code, which is then compiled to native code for optimal performance on the device.
+
+### Python Payload Example
+
+```python
+# os_detect.py - Python payload for OS detection
+#pythran export payload_main(int*, str*, str*)
+
+# These constants match the C API
+OS_UNKNOWN = 0
+OS_WINDOWS = 1
+OS_MACOS = 2
+OS_LINUX = 3
+OS_CHROMEOS = 4
+
+# Key codes
+KEY_R = 0x15
+KEY_RETURN = 0x28
+KEY_SPACE = 0x2C
+KEY_T = 0x17
+
+# Modifiers
+MOD_LCTRL = 0x01
+MOD_LALT = 0x04
+MOD_LMETA = 0x08 # Windows/Command key
+
+def payload_main(context):
+    # Set LED to yellow during detection
+    led_set_color(255, 255, 0, 0)
+    
+    # Get detected OS from context
+    detected_os = context["detected_os"]
+    
+    # Log detection confidence
+    log_message(f"OS Detection confidence: {os_get_confidence()}%")
+    
+    # Different actions based on detected OS
+    if detected_os == OS_WINDOWS:
+        led_set_color(0, 0, 255, 0)  # Blue
+        log_message("Windows detected - opening PowerShell")
+        
+        # Send Win+R to open Run dialog
+        keyboard_tap_with_modifiers(KEY_R, MOD_LMETA)
+        system_delay(500)
+        
+        # Type PowerShell and press Enter
+        keyboard_send_string("powershell")
+        keyboard_tap(KEY_RETURN)
+        system_delay(1000)
+        
+        # Execute a simple command
+        keyboard_send_line("Get-ComputerInfo | Select-Object OsName, OsVersion")
+    
+    elif detected_os == OS_MACOS:
+        led_set_color(0, 255, 0, 0)  # Green
+        log_message("macOS detected - opening Terminal")
+        
+        # Open Terminal with keyboard shortcut
+        keyboard_tap_with_modifiers(KEY_SPACE, MOD_LMETA)
+        system_delay(300)
+        keyboard_send_string("terminal")
+        system_delay(300)
+        keyboard_tap(KEY_RETURN)
+        system_delay(1000)
+        
+        # Execute a simple command
+        keyboard_send_line("sw_vers")
+    
+    elif detected_os == OS_LINUX:
+        led_set_color(255, 0, 0, 0)  # Red
+        log_message("Linux detected - opening Terminal")
+        
+        # Open Terminal with keyboard shortcut (varies by distro)
+        keyboard_tap_with_modifiers(KEY_T, MOD_LCTRL | MOD_LALT)
+        system_delay(1000)
+        
+        # Execute a simple command
+        keyboard_send_line("uname -a && cat /etc/os-release")
+    
+    else:
+        led_set_color(255, 0, 255, 0)  # Purple
+        log_message("Unknown OS or detection failed")
+    
+    # Wait 5 seconds before completing
+    system_delay(5000)
+    led_off()
+    return 0
+```
+
+### Compiling Python Payloads
+
+Python payloads are compiled using our LLVM toolchain:
+
+```sh
+# Compile a Python payload
+./tools/pythran/compile.py examples/python_payloads/os_detect.py --target ch569
+
+# This will:
+# 1. Use Pythran to compile the Python to C++
+# 2. Use Clang to compile the C++ to LLVM IR
+# 3. Link with the C API bindings
+# 4. Generate an ELF file compatible with the target chip
+```
+
+### Python API Bindings
+
+Our framework provides Python bindings to all core functionality:
+
+```python
+# Available Python API functions (map 1:1 to C functions)
+
+# Keyboard operations
+keyboard_press(key)
+keyboard_release(key)
+keyboard_tap(key)
+keyboard_press_modifier(modifiers)
+keyboard_release_modifier(modifiers)
+keyboard_tap_with_modifiers(key, modifiers)
+keyboard_send_string(text)
+keyboard_send_line(text)
+
+# LED control
+led_set_color(r, g, b, w)
+led_set_pattern(pattern)
+led_set_brightness(brightness)
+led_off()
+
+# System functions
+system_delay(ms)
+system_log(message)
+system_is_usb_controller()
+system_is_wireless_controller()
+
+# OS detection
+os_detect(flags)
+os_get_hostname()
+os_get_username()
+os_get_confidence()
+
+# Inter-chip communication
+interchip_trigger_event(event, data)
+interchip_wait_for_event(event, timeout_ms)
+interchip_send_data(channel, data)
+```
+
+### Python Payload Limitations
+
+The Pythran compiler supports most Python features needed for payloads:
+
+- ✅ Full support for control flow (if/for/while)
+- ✅ Functions and basic containers (lists, dicts)
+- ✅ String manipulation
+- ✅ Integer and floating-point operations
+- ✅ Integration with C API
+
+Unsupported features (generally not needed for payloads):
+- ❌ Dynamic code execution (eval/exec)
+- ❌ Complex class hierarchies and metaclasses
+- ❌ Dynamic imports
+- ❌ Some standard library modules
 
 ## Operation Modes
 
