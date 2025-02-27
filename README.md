@@ -507,6 +507,162 @@ wch-flasher -p /dev/ttyUSB0 -f ch569_firmware.bin
 esptool.py --chip esp32c6 --port /dev/ttyUSB1 write_flash 0x0 esp32c6_firmware.bin
 ```
 
+## Nim Payload Support
+
+The project also supports writing payloads in Nim, a statically typed language with Python-like syntax that compiles to C. Nim provides the readability of Python with the performance of compiled languages, making it excellent for embedded development.
+
+### Nim Payload Example
+
+```nim
+# os_detect.nim - Nim payload for OS detection
+#
+# This example demonstrates using Nim for USB Goose payloads
+# Nim provides Python-like syntax with static typing and
+# compile-time features, ideal for embedded development.
+
+# C bindings to the payload framework
+{.passC: "-I../../firmware/common/include".}
+{.compile: "../../tools/nim/bindings.c".}
+
+# OS detection constants
+const
+  OS_UNKNOWN* = 0
+  OS_WINDOWS* = 1
+  OS_MACOS* = 2
+  OS_LINUX* = 3
+
+# Key codes
+const
+  KEY_R* = 0x15
+  KEY_RETURN* = 0x28
+  KEY_SPACE* = 0x2C
+  KEY_T* = 0x17
+
+# Modifier keys
+const
+  MOD_LCTRL* = 0x01
+  MOD_LALT* = 0x04
+  MOD_LMETA* = 0x08  # Windows/Command key
+
+# PayloadContext structure
+type
+  PayloadContext* = object
+    detected_os*: int
+    security_level*: int
+    target_capabilities*: uint32
+    hostname*: array[32, char]
+    username*: array[32, char]
+    timestamp*: uint64
+    reserved*: array[32, uint8]
+
+# Import framework functions
+proc led_set_color*(r, g, b, w: cint) {.importc.}
+proc led_off*() {.importc.}
+proc keyboard_tap_with_modifiers*(key: cint, modifiers: cint) {.importc.}
+proc keyboard_send_string*(text: cstring) {.importc.}
+proc keyboard_tap*(key: cint) {.importc.}
+proc keyboard_send_line*(text: cstring) {.importc.}
+proc system_delay*(ms: cint) {.importc.}
+proc log_message*(message: cstring) {.importc.}
+
+# Main payload function - exported for C calling
+proc payload_main*(ctx: ptr PayloadContext): int {.exportc.} =
+  # Set LED to yellow during initialization
+  led_set_color(255, 255, 0, 0)
+  
+  # Get current OS from context
+  let detectedOs = ctx.detected_os
+  
+  # Different actions based on detected OS
+  case detectedOs:
+    of OS_WINDOWS:
+      led_set_color(0, 0, 255, 0)  # Blue for Windows
+      log_message("Windows detected - opening PowerShell")
+      
+      # Open Run dialog with Win+R
+      keyboard_tap_with_modifiers(KEY_R, MOD_LMETA)
+      system_delay(500)
+      
+      # Type PowerShell and press Enter
+      keyboard_send_string("powershell")
+      keyboard_tap(KEY_RETURN)
+      system_delay(1000)
+      
+      # Execute commands
+      keyboard_send_line("Get-ComputerInfo | Select-Object OsName, OsVersion")
+  
+  # Wait 5 seconds before completing
+  system_delay(5000)
+  led_off()
+  return 0
+```
+
+### Compiling Nim Payloads
+
+Nim payloads are compiled using our LLVM toolchain:
+
+```sh
+# Compile a Nim payload
+./tools/nim/compile.py examples/nim_payloads/os_detect.nim --target ch569
+
+# This will:
+# 1. Use Nim to compile the Nim code to C
+# 2. Use Clang to compile the C to LLVM IR
+# 3. Link with the C API bindings
+# 4. Generate an ELF file compatible with the target chip
+```
+
+### Nim Advantages
+
+1. **Static typing with type inference** - Catch errors at compile time while maintaining clean syntax
+2. **Memory safety features** - Prevents many common bugs
+3. **Compiled performance** - Native code execution speed
+4. **Python-like syntax** - Easy to read and write
+5. **Powerful metaprogramming** - Compile-time code generation and optimization
+6. **Low-level control** - Direct memory access when needed
+7. **Small output binaries** - Efficient for embedded platforms
+
+### Nim API Bindings
+
+The framework provides Nim bindings to all core functionality with the same function names as our C API:
+
+```nim
+# Available Nim API functions
+
+# Keyboard operations
+proc keyboard_press*(key: cint) {.importc.}
+proc keyboard_release*(key: cint) {.importc.}
+proc keyboard_tap*(key: cint) {.importc.}
+proc keyboard_press_modifier*(modifiers: cint) {.importc.}
+proc keyboard_release_modifier*(modifiers: cint) {.importc.}
+proc keyboard_tap_with_modifiers*(key: cint, modifiers: cint) {.importc.}
+proc keyboard_send_string*(text: cstring) {.importc.}
+proc keyboard_send_line*(text: cstring) {.importc.}
+
+# LED control
+proc led_set_color*(r, g, b, w: cint) {.importc.}
+proc led_set_pattern*(pattern: cint) {.importc.}
+proc led_set_brightness*(brightness: cint) {.importc.}
+proc led_off*() {.importc.}
+
+# System functions
+proc system_delay*(ms: cint) {.importc.}
+proc log_message*(message: cstring) {.importc.}
+proc system_is_usb_controller*(): bool {.importc.}
+proc system_is_wireless_controller*(): bool {.importc.}
+
+# OS detection
+proc os_detect*(flags: cint): cint {.importc.}
+proc os_get_hostname*(buffer: cstring, max_len: cint): bool {.importc.}
+proc os_get_username*(buffer: cstring, max_len: cint): bool {.importc.}
+proc os_get_confidence*(): cint {.importc.}
+
+# Inter-chip communication
+proc interchip_trigger_event*(event: cint, data: pointer, data_len: cint): bool {.importc.}
+proc interchip_wait_for_event*(event: cint, timeout_ms: cint): bool {.importc.}
+proc interchip_send_data*(channel: cint, data: pointer, data_len: cint): bool {.importc.}
+```
+
 ## Future Enhancements
 
 - **AI-powered targeting** using ESP32's ML capabilities
