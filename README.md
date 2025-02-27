@@ -117,73 +117,76 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 ```
 /firmware
  ├── common/                   # Shared code between chips
- │   ├── include/              # Public headers
- │   │   ├── payload_framework.h  # Core framework API
- │   │   ├── protocol.h           # Inter-chip communication protocol
- │   │   └── security.h           # Shared security primitives
- │   ├── src/                  # Implementation
- │   │   ├── protocol.c
- │   │   ├── security.c
- │   │   └── payload_framework.c
+ │   ├── payload_framework.h   # Core framework API
+ │   ├── payload_framework.c   # Framework implementation
+ │   ├── protocol.h            # Inter-chip communication protocol
+ │   ├── protocol.c            # Protocol implementation
+ │   ├── security.h            # Shared security primitives
+ │   ├── security.c            # Security implementation
  │   ├── tests/                # Unit tests for common code
  │   ├── cmake/                # Common CMake modules
  │   └── CMakeLists.txt        # Build config for common module
  │
  ├── ch569/                    # WCH CH569 USB controller code
- │   ├── include/              # Ch569-specific headers
+ │   ├── main.c                # Main firmware for CH569
+ │   ├── startup.c             # Startup code
+ │   ├── system_ch569.c        # System initialization
+ │   ├── ch569_hid.h           # HID interface
+ │   ├── ch569_hid.c           # HID implementation
+ │   ├── ch569_os_detect.h     # OS detection interface
+ │   ├── ch569_os_detect.c     # OS detection implementation
  │   ├── config/               # Configuration files
- │   ├── src/
- │   │   ├── main.c            # Main firmware for CH569
- │   │   ├── startup.c         # Startup code
- │   │   ├── system_ch569.c    # System initialization
- │   │   ├── ch569_hid.c       # HID implementation
- │   │   ├── ch569_os_detect.c # OS detection implementation
- │   │   ├── usb/              # USB functionality
- │   │   │   ├── usb_core.c    # USB 2.0 functionality 
- │   │   │   ├── usb3_core.c   # USB 3.0 core functionality
- │   │   │   ├── hid.c         # Keyboard + Mouse
- │   │   │   ├── msc.c         # Mass Storage
- │   │   │   └── u2f.c         # U2F/FIDO2 implementation
- │   │   ├── storage/
- │   │   │   ├── sd_card.c     # SD card interface
- │   │   │   └── encryption.c  # Storage encryption
- │   │   ├── payload/
- │   │   │   ├── loader.c      # ELF loader
- │   │   │   └── executor.c    # Payload execution environment
- │   │   ├── comm/
- │   │   │   └── spi_slave.c   # SPI communication with ESP32
- │   │   └── hardware/
- │   │       ├── leds.c        # LED control
- │   │       └── rtc.c         # Real-time clock functions
+ │   ├── usb/                  # USB functionality
+ │   │   ├── usb_core.c        # USB 2.0 functionality 
+ │   │   ├── usb3_core.c       # USB 3.0 core functionality
+ │   │   ├── usb_descriptors.h # USB descriptors
+ │   │   ├── hid.c             # Keyboard + Mouse
+ │   │   ├── msc.c             # Mass Storage
+ │   │   └── u2f.c             # U2F/FIDO2 implementation
+ │   ├── storage/
+ │   │   ├── sd_card.c         # SD card interface
+ │   │   └── encryption.c      # Storage encryption
+ │   ├── payload/
+ │   │   ├── loader.c          # ELF loader
+ │   │   └── executor.c        # Payload execution environment
+ │   ├── comm/
+ │   │   └── spi_slave.c       # SPI communication with ESP32
+ │   ├── hardware/
+ │   │   ├── leds.c            # LED control
+ │   │   └── rtc.c             # Real-time clock functions
  │   ├── vendor/               # CH569 vendor-specific code
  │   │   └── ch569/
- │   │       ├── include/      # Vendor header files
- │   │       └── peripheral/   # Peripheral drivers
+ │   │       ├── ch569_usb.h   # Vendor USB headers
+ │   │       ├── ch569_gpio.h  # GPIO headers
+ │   │       ├── peripheral/   # Peripheral drivers
  │   ├── ch569_link.ld         # Linker script
  │   ├── ch569_payload.ld      # Payload linker script
  │   └── CMakeLists.txt        # Build config for CH569
  │
  ├── esp32c6/                  # ESP32-C6 wireless controller code
- │   ├── include/              # ESP32-specific headers
+ │   ├── main.c                # Main firmware for ESP32-C6
+ │   ├── esp32c6_os_detect.h   # OS detection interface
+ │   ├── esp32c6_os_detect.c   # OS detection implementation
  │   ├── config/               # Configuration files
- │   ├── src/
- │   │   ├── main.c            # Main firmware for ESP32-C6
- │   │   ├── esp32c6_os_detect.c # OS detection implementation
- │   │   ├── wireless/
- │   │   │   ├── wifi.c        # Wi-Fi functionality
- │   │   │   ├── ble.c         # Bluetooth LE stack
- │   │   │   └── thread.c      # 802.15.4/Thread implementation
- │   │   ├── comm/
- │   │   │   └── spi_master.c  # SPI communication with CH569
- │   │   ├── web/
- │   │   │   ├── server.c      # Web configuration server
- │   │   │   └── api.c         # RESTful API for configuration
- │   │   ├── recon/
- │   │   │   ├── scanner.c     # Network reconnaissance
- │   │   │   └── analyzer.c    # Target analysis
- │   │   └── security/
- │   │       ├── crypto.c      # Cryptographic operations
- │   │       └── secure_storage.c # Protected key storage
+ │   ├── wireless/
+ │   │   ├── wifi.h            # Wi-Fi interface
+ │   │   ├── wifi.c            # Wi-Fi functionality
+ │   │   ├── ble.h             # BLE interface
+ │   │   ├── ble.c             # Bluetooth LE stack
+ │   │   ├── thread.h          # Thread interface
+ │   │   └── thread.c          # 802.15.4/Thread implementation
+ │   ├── comm/
+ │   │   ├── spi_master.h      # SPI interface
+ │   │   └── spi_master.c      # SPI communication with CH569
+ │   ├── web/
+ │   │   ├── server.c          # Web configuration server
+ │   │   └── api.c             # RESTful API for configuration
+ │   ├── recon/
+ │   │   ├── scanner.c         # Network reconnaissance
+ │   │   └── analyzer.c        # Target analysis
+ │   ├── security/
+ │   │   ├── crypto.c          # Cryptographic operations
+ │   │   └── secure_storage.c  # Protected key storage
  │   ├── sdkconfig.defaults    # ESP-IDF configuration
  │   ├── esp32c6_payload.ld    # Payload linker script
  │   └── CMakeLists.txt        # Build config for ESP32-C6
@@ -198,11 +201,19 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
  │   └── CMakeLists.txt        # Build config for examples
  │
  ├── tools/                    # Development tools
- │   ├── src/
- │   │   ├── payload_builder/  # Visual payload builder (Qt)
- │   │   ├── payload_builder_wx/ # Alternate builder (wxWidgets)
- │   │   ├── simulator/        # Payload simulator
- │   │   └── flashers/         # Programming utilities
+ │   ├── payload_builder/      # Visual payload builder (Qt)
+ │   │   ├── main.cpp
+ │   │   ├── mainwindow.cpp
+ │   │   ├── mainwindow.h
+ │   │   └── ui/               # UI files
+ │   ├── simulator/            # Payload simulator
+ │   │   ├── main.cpp
+ │   │   ├── usb_sim.cpp
+ │   │   └── wireless_sim.cpp
+ │   ├── flashers/             # Programming utilities
+ │   │   ├── wch-flasher.py    # CH569 flasher
+ │   │   ├── dual_flasher.cpp  # Combined flasher
+ │   │   └── serial_port.cpp   # Serial port utilities
  │   └── CMakeLists.txt        # Build config for tools
  │
  ├── docs/                     # Documentation

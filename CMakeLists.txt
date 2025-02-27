@@ -15,15 +15,16 @@ option(BUILD_ESP32C6 "Build ESP32-C6 wireless controller firmware" ON)
 option(BUILD_TOOLS "Build development tools" ON)
 option(BUILD_EXAMPLES "Build example payloads" ON)
 option(BUILD_DOCS "Build documentation" ON)
+option(BUILD_TESTING "Build and run tests" ON)
 
 # Include external toolchain files
 if(BUILD_CH569)
-  set(CH569_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ch569_toolchain.cmake"
+  set(CH569_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/firmware/cmake/ch569_toolchain.cmake"
       CACHE FILEPATH "Toolchain file for CH569")
 endif()
 
 if(BUILD_ESP32C6)
-  set(ESP32C6_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/esp32c6_toolchain.cmake"
+  set(ESP32C6_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/firmware/cmake/esp32c6_toolchain.cmake"
       CACHE FILEPATH "Toolchain file for ESP32-C6")
 endif()
 
@@ -50,17 +51,24 @@ function(add_subproject_target)
   # Define build directory for this subproject
   set(SUBPROJ_BINARY_DIR "${CMAKE_BINARY_DIR}/${SUBPROJ_NAME}")
   
+  # Create a list of dependency targets
+  set(DEPENDS_TARGETS "")
+  foreach(dep ${SUBPROJ_DEPENDS})
+    list(APPEND DEPENDS_TARGETS "${dep}")
+  endforeach()
+  
   # Define ExternalProject_Add parameters
   set(SUBPROJ_ARGS
-    DEPENDS ${SUBPROJ_DEPENDS}
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${SUBPROJ_NAME}"
+    DEPENDS ${DEPENDS_TARGETS}
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/firmware/${SUBPROJ_NAME}"
     BINARY_DIR "${SUBPROJ_BINARY_DIR}"
     CMAKE_ARGS
       -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
       -DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}
       $<$<BOOL:${SUBPROJ_TOOLCHAIN_FILE}>:-DCMAKE_TOOLCHAIN_FILE=${SUBPROJ_TOOLCHAIN_FILE}>
       -DPARENT_BUILD=ON
-      -DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+      -DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/firmware
+      -DBUILD_TESTING=${BUILD_TESTING}
     INSTALL_COMMAND ""
     BUILD_ALWAYS ON
   )
@@ -80,6 +88,14 @@ function(add_subproject_target)
     COMMAND ${CMAKE_COMMAND} --build ${SUBPROJ_BINARY_DIR} --target clean
     COMMENT "Cleaning ${SUBPROJ_NAME}"
   )
+  
+  # Create test target if testing is enabled
+  if(BUILD_TESTING)
+    add_custom_target(test_${SUBPROJ_NAME}
+      COMMAND ${CMAKE_COMMAND} --build ${SUBPROJ_BINARY_DIR} --target test
+      COMMENT "Testing ${SUBPROJ_NAME}"
+    )
+  endif()
 endfunction()
 
 # Add "common" module (shared code, must be built first)
@@ -141,6 +157,33 @@ if(BUILD_CH569 AND BUILD_ESP32C6)
   )
 endif()
 
+# Add complete test target if testing is enabled
+if(BUILD_TESTING)
+  add_custom_target(test_all)
+  
+  if(BUILD_CH569)
+    add_dependencies(test_all test_ch569)
+  endif()
+  
+  if(BUILD_ESP32C6)
+    add_dependencies(test_all test_esp32c6)
+  endif()
+  
+  add_dependencies(test_all test_common)
+  
+  if(BUILD_TOOLS)
+    add_dependencies(test_all test_tools)
+  endif()
+endif()
+
+# Add target to build all examples
+if(BUILD_EXAMPLES AND BUILD_CH569 AND BUILD_ESP32C6)
+  add_custom_target(build_all_examples
+    DEPENDS build_examples
+    COMMENT "Building all example payloads"
+  )
+endif()
+
 # Print build configuration
 message(STATUS "Build configuration:")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
@@ -149,3 +192,4 @@ message(STATUS "  Building ESP32-C6 firmware: ${BUILD_ESP32C6}")
 message(STATUS "  Building tools: ${BUILD_TOOLS}")
 message(STATUS "  Building examples: ${BUILD_EXAMPLES}")
 message(STATUS "  Building docs: ${BUILD_DOCS}")
+message(STATUS "  Building tests: ${BUILD_TESTING}")

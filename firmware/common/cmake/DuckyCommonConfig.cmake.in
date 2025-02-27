@@ -1,0 +1,36 @@
+@PACKAGE_INIT@
+
+# Include the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/DuckyCommonTargets.cmake")
+
+# Set variables for include directories
+set_and_check(DuckyCommon_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set(DuckyCommon_INCLUDE_DIRS "${DuckyCommon_INCLUDE_DIR}")
+
+# Define the libraries
+set(DuckyCommon_LIBRARIES DuckyCommon::ducky_common)
+set(DuckyCommon_CPP_LIBRARIES DuckyCommon::ducky_common_cpp)
+
+# Check if the required components are available
+check_required_components(DuckyCommon)
+
+# Set the source directory for access to headers
+set(DuckyCommon_SOURCE_DIR "@CMAKE_CURRENT_SOURCE_DIR@")
+
+# Create aliases for backward compatibility
+if(NOT TARGET DuckyCommon::ducky_common)
+  add_library(DuckyCommon::ducky_common ALIAS ducky_common)
+endif()
+
+if(NOT TARGET DuckyCommon::ducky_common_cpp)
+  add_library(DuckyCommon::ducky_common_cpp ALIAS ducky_common_cpp)
+endif()
+
+# Report status if not in quiet mode
+if(NOT DuckyCommon_FIND_QUIETLY)
+  message(STATUS "Found DuckyCommon: ${CMAKE_CURRENT_LIST_DIR}")
+  message(STATUS "  Version: @PROJECT_VERSION@")
+  message(STATUS "  C Library: ${DuckyCommon_LIBRARIES}")
+  message(STATUS "  C++ Library: ${DuckyCommon_CPP_LIBRARIES}")
+  message(STATUS "  Include dirs: ${DuckyCommon_INCLUDE_DIRS}")
+endif()
