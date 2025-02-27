@@ -117,66 +117,106 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 ```
 /firmware
  ├── common/                   # Shared code between chips
- │   ├── protocol.h            # Inter-chip communication protocol
- │   ├── payload_framework.h   # LLVM payload framework definitions
- │   └── security.h            # Shared security primitives
+ │   ├── include/              # Public headers
+ │   │   ├── payload_framework.h  # Core framework API
+ │   │   ├── protocol.h           # Inter-chip communication protocol
+ │   │   └── security.h           # Shared security primitives
+ │   ├── src/                  # Implementation
+ │   │   ├── protocol.c
+ │   │   ├── security.c
+ │   │   └── payload_framework.c
+ │   ├── tests/                # Unit tests for common code
+ │   ├── cmake/                # Common CMake modules
+ │   └── CMakeLists.txt        # Build config for common module
  │
  ├── ch569/                    # WCH CH569 USB controller code
- │   ├── main.c                # Main firmware for CH569
- │   ├── usb/                  # USB functionality
- │   │   ├── usb3_core.c       # USB 3.0 core functionality
- │   │   ├── hid.c             # Keyboard + Mouse 
- │   │   ├── msc.c             # Mass Storage
- │   │   └── u2f.c             # U2F/FIDO2 implementation
- │   ├── storage/
- │   │   ├── sd_card.c         # SD card interface
- │   │   └── encryption.c      # Storage encryption
- │   ├── payload/
- │   │   ├── loader.c          # ELF loader
- │   │   └── executor.c        # Payload execution environment
- │   ├── comm/
- │   │   └── spi_slave.c       # SPI communication with ESP32
- │   └── hardware/
- │       ├── leds.c            # LED control
- │       └── rtc.c             # Real-time clock functions
+ │   ├── include/              # Ch569-specific headers
+ │   ├── config/               # Configuration files
+ │   ├── src/
+ │   │   ├── main.c            # Main firmware for CH569
+ │   │   ├── startup.c         # Startup code
+ │   │   ├── system_ch569.c    # System initialization
+ │   │   ├── ch569_hid.c       # HID implementation
+ │   │   ├── ch569_os_detect.c # OS detection implementation
+ │   │   ├── usb/              # USB functionality
+ │   │   │   ├── usb_core.c    # USB 2.0 functionality 
+ │   │   │   ├── usb3_core.c   # USB 3.0 core functionality
+ │   │   │   ├── hid.c         # Keyboard + Mouse
+ │   │   │   ├── msc.c         # Mass Storage
+ │   │   │   └── u2f.c         # U2F/FIDO2 implementation
+ │   │   ├── storage/
+ │   │   │   ├── sd_card.c     # SD card interface
+ │   │   │   └── encryption.c  # Storage encryption
+ │   │   ├── payload/
+ │   │   │   ├── loader.c      # ELF loader
+ │   │   │   └── executor.c    # Payload execution environment
+ │   │   ├── comm/
+ │   │   │   └── spi_slave.c   # SPI communication with ESP32
+ │   │   └── hardware/
+ │   │       ├── leds.c        # LED control
+ │   │       └── rtc.c         # Real-time clock functions
+ │   ├── vendor/               # CH569 vendor-specific code
+ │   │   └── ch569/
+ │   │       ├── include/      # Vendor header files
+ │   │       └── peripheral/   # Peripheral drivers
+ │   ├── ch569_link.ld         # Linker script
+ │   ├── ch569_payload.ld      # Payload linker script
+ │   └── CMakeLists.txt        # Build config for CH569
  │
  ├── esp32c6/                  # ESP32-C6 wireless controller code
- │   ├── main.c                # Main firmware for ESP32-C6
- │   ├── wireless/
- │   │   ├── wifi.c            # Wi-Fi functionality
- │   │   ├── ble.c             # Bluetooth LE stack
- │   │   └── thread.c          # 802.15.4/Thread implementation
- │   ├── comm/
- │   │   └── spi_master.c      # SPI communication with CH569
- │   ├── web/
- │   │   ├── server.c          # Web configuration server
- │   │   └── api.c             # RESTful API for configuration
- │   ├── recon/
- │   │   ├── scanner.c         # Network reconnaissance
- │   │   └── analyzer.c        # Target analysis
- │   └── security/
- │       ├── crypto.c          # Cryptographic operations
- │       └── secure_storage.c  # Protected key storage
+ │   ├── include/              # ESP32-specific headers
+ │   ├── config/               # Configuration files
+ │   ├── src/
+ │   │   ├── main.c            # Main firmware for ESP32-C6
+ │   │   ├── esp32c6_os_detect.c # OS detection implementation
+ │   │   ├── wireless/
+ │   │   │   ├── wifi.c        # Wi-Fi functionality
+ │   │   │   ├── ble.c         # Bluetooth LE stack
+ │   │   │   └── thread.c      # 802.15.4/Thread implementation
+ │   │   ├── comm/
+ │   │   │   └── spi_master.c  # SPI communication with CH569
+ │   │   ├── web/
+ │   │   │   ├── server.c      # Web configuration server
+ │   │   │   └── api.c         # RESTful API for configuration
+ │   │   ├── recon/
+ │   │   │   ├── scanner.c     # Network reconnaissance
+ │   │   │   └── analyzer.c    # Target analysis
+ │   │   └── security/
+ │   │       ├── crypto.c      # Cryptographic operations
+ │   │       └── secure_storage.c # Protected key storage
+ │   ├── sdkconfig.defaults    # ESP-IDF configuration
+ │   ├── esp32c6_payload.ld    # Payload linker script
+ │   └── CMakeLists.txt        # Build config for ESP32-C6
  │
- ├── payloads/                 # Example payloads
- │   ├── usb_examples/         # USB-focused payloads
- │   ├── wireless_examples/    # Wireless-focused payloads
- │   └── combined_examples/    # Multi-vector payloads
+ ├── examples/                 # Example payloads
+ │   ├── usb_payloads/         # USB-focused payloads
+ │   │   └── os_detect_basic.c # C example
+ │   ├── wireless_payloads/    # Wireless-focused payloads
+ │   │   └── wifi_recon.rs     # Rust example
+ │   ├── combined_payloads/    # Multi-vector payloads
+ │   │   └── exfiltration.cpp  # C++ example
+ │   └── CMakeLists.txt        # Build config for examples
  │
  ├── tools/                    # Development tools
- │   ├── payload_builder/      # Visual payload creation tool
- │   ├── simulator/            # Payload simulation environment
- │   └── flasher/              # Dual-chip programming utility
+ │   ├── src/
+ │   │   ├── payload_builder/  # Visual payload builder (Qt)
+ │   │   ├── payload_builder_wx/ # Alternate builder (wxWidgets)
+ │   │   ├── simulator/        # Payload simulator
+ │   │   └── flashers/         # Programming utilities
+ │   └── CMakeLists.txt        # Build config for tools
  │
- ├── build/                    # Build system
- │   ├── cmake/                # CMake modules
- │   ├── ch569.cmake           # CH569-specific build config
- │   └── esp32c6.cmake         # ESP32-C6-specific build config
+ ├── docs/                     # Documentation
+ │   ├── api/                  # API reference
+ │   ├── hardware/             # Hardware design docs
+ │   └── tutorials/            # Tutorials and guides
  │
- └── docs/                     # Documentation
-     ├── api/                  # API reference
-     ├── hardware/             # Hardware design docs
-     └── tutorials/            # Tutorials and guides
+ ├── cmake/                    # CMake modules
+ │   ├── ch569_toolchain.cmake # CH569-specific toolchain
+ │   └── esp32c6_toolchain.cmake # ESP32-C6-specific toolchain
+ │
+ ├── build.sh                  # Build script helper
+ ├── CMakeLists.txt            # Top-level CMake file
+ └── README.md                 # Project documentation
 ```
 
 ## Unified LLVM Development
