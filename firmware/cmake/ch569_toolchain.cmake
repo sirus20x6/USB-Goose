@@ -21,6 +21,12 @@ else()
     endif()
 endif()
 
+# Check if compiler exists
+if(NOT EXISTS "${LLVM_RISCV_ROOT}/bin/clang")
+    message(FATAL_ERROR "Clang compiler not found at ${LLVM_RISCV_ROOT}/bin/clang")
+endif()
+
+# Set compiler executables
 set(CMAKE_C_COMPILER "${LLVM_RISCV_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_RISCV_ROOT}/bin/clang++")
 set(CMAKE_ASM_COMPILER "${LLVM_RISCV_ROOT}/bin/clang")
@@ -43,9 +49,27 @@ set(COMMON_FLAGS "${COMMON_FLAGS} -ffunction-sections -fdata-sections")
 set(COMMON_FLAGS "${COMMON_FLAGS} -nostdlib -ffreestanding")
 set(COMMON_FLAGS "${COMMON_FLAGS} -DCH569 -DRISCV -DUSE_USB3")
 
+# Add support for C++ exceptions and RTTI if needed
+# By default, these are turned off for embedded systems
+set(CMAKE_CXX_FLAGS_INIT "${COMMON_FLAGS} -fno-rtti -fno-exceptions")
+
+# Check LLVM/Clang version and add appropriate flags
+execute_process(
+    COMMAND ${CMAKE_C_COMPILER} --version
+    OUTPUT_VARIABLE CLANG_VERSION_OUTPUT
+)
+string(REGEX MATCH "version ([0-9]+)" CLANG_VERSION_MATCH "${CLANG_VERSION_OUTPUT}")
+if(CLANG_VERSION_MATCH)
+    set(CLANG_VERSION_MAJOR ${CMAKE_MATCH_1})
+    # Add version-specific flags
+    if(CLANG_VERSION_MAJOR GREATER_EQUAL 10)
+        # Modern LLVM/Clang versions may need additional flags
+        set(COMMON_FLAGS "${COMMON_FLAGS} -Wno-unused-command-line-argument")
+    endif()
+endif()
+
 # CH569 specific optimizations and flags
 set(CMAKE_C_FLAGS_INIT "${COMMON_FLAGS}")
-set(CMAKE_CXX_FLAGS_INIT "${COMMON_FLAGS} -fno-rtti -fno-exceptions")
 set(CMAKE_ASM_FLAGS_INIT "${COMMON_FLAGS}")
 
 # Debug flags with optimizations for code size
@@ -68,3 +92,24 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # Define additional tools for flashing
 set(WCH_FLASH_TOOL "${CMAKE_CURRENT_LIST_DIR}/../tools/wch-flasher.py" CACHE STRING "Path to WCH flash tool")
+
+# Additional variables for language support
+if(ENABLE_RUST)
+    # Find rustc and cargo
+    find_program(RUSTC_EXECUTABLE rustc)
+    find_program(CARGO_EXECUTABLE cargo)
+    
+    if(RUSTC_EXECUTABLE AND CARGO_EXECUTABLE)
+        message(STATUS "Rust toolchain found: ${RUSTC_EXECUTABLE}")
+        
+        # Check if rust-src component is installed
+        execute_process(
+            COMMAND rustup component list --installed
+            OUTPUT_VARIABLE RUSTUP_COMPONENTS
+        )
+        
+        if(NOT "${RUSTUP_COMPONENTS}" MATCHES "rust-src")
+            message(WARNING "Rust source component not found. Please install with 'rustup component add rust-src'")
+        endif()
+    endif()
+endif()

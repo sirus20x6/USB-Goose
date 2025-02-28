@@ -1,133 +1,222 @@
 cmake_minimum_required(VERSION 3.16)
-project(DuckyExamples VERSION 0.1.0 LANGUAGES C CXX)
-
-# Find Python interpreter
-find_package(Python3 COMPONENTS Interpreter QUIET)
-set(PYTHON_AVAILABLE ${Python3_FOUND})
-
-# Check for Pythran
-find_package(Pythran QUIET)
-set(PYTHRAN_AVAILABLE ${Pythran_FOUND})
-
-# Check for Nim compiler
-execute_process(
-    COMMAND nim --version
-    RESULT_VARIABLE NIM_RESULT
-    OUTPUT_QUIET
-    ERROR_QUIET
-)
-set(NIM_AVAILABLE FALSE)
-if(${NIM_RESULT} EQUAL 0)
-    set(NIM_AVAILABLE TRUE)
-endif()
+project(USBGooseExamples VERSION 0.2.0 LANGUAGES C CXX)
 
 # Initialize list of example targets
 set(EXAMPLE_TARGETS "")
 
-# Add C/C++ examples
-# Add test_interchip example
-add_executable(test_interchip ${CMAKE_CURRENT_SOURCE_DIR}/combined_payloads/test_interchip.c)
-target_link_libraries(test_interchip PRIVATE ducky_common)
-target_include_directories(test_interchip PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common/include)
-list(APPEND EXAMPLE_TARGETS test_interchip)
-
-# Add OS detection example
-add_executable(os_detect_basic ${CMAKE_CURRENT_SOURCE_DIR}/usb_payloads/os_detect_basic.c)
-target_link_libraries(os_detect_basic PRIVATE ducky_common)
-target_include_directories(os_detect_basic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common/include)
-list(APPEND EXAMPLE_TARGETS os_detect_basic)
-
-# Add exfiltration example
-add_executable(exfiltration ${CMAKE_CURRENT_SOURCE_DIR}/combined_payloads/exfiltration.cpp)
-target_link_libraries(exfiltration PRIVATE ducky_common)
-target_include_directories(exfiltration PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../common/include)
-list(APPEND EXAMPLE_TARGETS exfiltration)
-
-# Add Python examples if Python is available
-if(PYTHON_AVAILABLE)
-    # Define a function to add Python payload targets
-    function(add_python_payload NAME SOURCE TARGET_CHIP)
-        set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${NAME}_${TARGET_CHIP}.elf")
-        set(PYTHRAN_COMPILER "${CMAKE_CURRENT_SOURCE_DIR}/../tools/pythran/compile.py")
-        
-        # Add custom command to compile Python to ELF
-        add_custom_command(
-            OUTPUT ${OUTPUT_FILE}
-            COMMAND ${Python3_EXECUTABLE} ${PYTHRAN_COMPILER} 
-                    ${SOURCE} 
-                    --target ${TARGET_CHIP} 
-                    --output ${OUTPUT_FILE}
-            DEPENDS ${SOURCE} ${PYTHRAN_COMPILER}
-            COMMENT "Compiling Python payload ${NAME} for ${TARGET_CHIP}"
-        )
-        
-        # Add custom target
-        add_custom_target(${NAME}_${TARGET_CHIP} ALL
-            DEPENDS ${OUTPUT_FILE}
-        )
-        
-        # Add to the list of examples
-        list(APPEND EXAMPLE_TARGETS ${NAME}_${TARGET_CHIP})
-        set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} PARENT_SCOPE)
-    endfunction()
-    
-    # Add Python payloads for each target chip
-    add_python_payload(os_detect_py 
-                      ${CMAKE_CURRENT_SOURCE_DIR}/python_payloads/os_detect.py 
-                      ch569)
-    
-    add_python_payload(os_detect_py 
-                      ${CMAKE_CURRENT_SOURCE_DIR}/python_payloads/os_detect.py 
-                      esp32c6)
-                      
-    # Additional Python payloads can be added here
+# Find common libraries
+if(DEFINED PROJECT_ROOT)
+    # When building from superbuild, include from project root
+    set(COMMON_DIR "${PROJECT_ROOT}/common")
+    include_directories(${COMMON_DIR}/include)
 else()
-    message(STATUS "Python not found, skipping Python payloads")
+    # When building standalone, use find_package
+    find_package(DuckyCommon REQUIRED)
 endif()
 
-# Add Nim examples if Nim is available
-if(PYTHON_AVAILABLE AND NIM_AVAILABLE)
-    # Define a function to add Nim payload targets
-    function(add_nim_payload NAME SOURCE TARGET_CHIP)
-        set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${NAME}_${TARGET_CHIP}.elf")
-        set(NIM_COMPILER "${CMAKE_CURRENT_SOURCE_DIR}/../tools/nim/compile.py")
+# Add C example payloads
+function(add_c_payload NAME SOURCES TARGET_CHIPS)
+    foreach(CHIP ${TARGET_CHIPS})
+        set(TARGET_NAME "${NAME}_${CHIP}")
+        add_executable(${TARGET_NAME} ${SOURCES})
         
-        # Add custom command to compile Nim to ELF
-        add_custom_command(
-            OUTPUT ${OUTPUT_FILE}
-            COMMAND ${Python3_EXECUTABLE} ${NIM_COMPILER} 
-                    ${SOURCE} 
-                    --target ${TARGET_CHIP} 
-                    --output ${OUTPUT_FILE}
-            DEPENDS ${SOURCE} ${NIM_COMPILER}
-            COMMENT "Compiling Nim payload ${NAME} for ${TARGET_CHIP}"
+        if(DEFINED PROJECT_ROOT)
+            target_include_directories(${TARGET_NAME} PRIVATE 
+                ${PROJECT_ROOT}/common/include
+                ${PROJECT_ROOT}/${CHIP}/include
+            )
+            target_link_libraries(${TARGET_NAME} PRIVATE 
+                "${PROJECT_ROOT}/common/build/libducky_common.a"
+            )
+        else()
+            target_link_libraries(${TARGET_NAME} PRIVATE DuckyCommon::ducky_common)
+        endif()
+        
+        # Set output directory based on chip
+        set_target_properties(${TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads"
         )
         
-        # Add custom target
-        add_custom_target(${NAME}_${TARGET_CHIP} ALL
-            DEPENDS ${OUTPUT_FILE}
+        # Add to targets list
+        list(APPEND EXAMPLE_TARGETS ${TARGET_NAME})
+    endforeach()
+    
+    # Update the parent scope variable
+    set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} PARENT_SCOPE)
+endfunction()
+
+# Add C++ example payloads
+function(add_cpp_payload NAME SOURCES TARGET_CHIPS)
+    foreach(CHIP ${TARGET_CHIPS})
+        set(TARGET_NAME "${NAME}_${CHIP}")
+        add_executable(${TARGET_NAME} ${SOURCES})
+        
+        if(DEFINED PROJECT_ROOT)
+            target_include_directories(${TARGET_NAME} PRIVATE 
+                ${PROJECT_ROOT}/common/include
+                ${PROJECT_ROOT}/${CHIP}/include
+            )
+            target_link_libraries(${TARGET_NAME} PRIVATE 
+                "${PROJECT_ROOT}/common/build/libducky_common.a"
+            )
+        else()
+            target_link_libraries(${TARGET_NAME} PRIVATE 
+                DuckyCommon::ducky_common
+                DuckyCommon::ducky_common_cpp
+            )
+        endif()
+        
+        # Set C++ standard
+        set_target_properties(${TARGET_NAME} PROPERTIES
+            CXX_STANDARD 17
+            CXX_STANDARD_REQUIRED ON
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads"
         )
         
-        # Add to the list of examples
-        list(APPEND EXAMPLE_TARGETS ${NAME}_${TARGET_CHIP})
+        # Add to targets list
+        list(APPEND EXAMPLE_TARGETS ${TARGET_NAME})
+    endforeach()
+    
+    # Update the parent scope variable
+    set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} PARENT_SCOPE)
+endfunction()
+
+# Set up chip list
+set(ALL_CHIPS "ch569;esp32c6")
+set(USB_CHIPS "ch569")
+set(WIRELESS_CHIPS "esp32c6")
+
+# Add USB payloads (CH569 only)
+add_c_payload(os_detect_basic 
+              "${CMAKE_CURRENT_SOURCE_DIR}/usb_payloads/os_detect_basic.c"
+              "${USB_CHIPS}")
+
+# Add wireless payloads (ESP32-C6 only)
+if(ENABLE_RUST)
+    # We'll handle Rust separately with custom commands
+    set(RUST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/wireless_payloads/wifi_recon.rs")
+    set(RUST_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/esp32c6/payloads/wifi_recon_esp32c6.elf")
+    
+    add_custom_command(
+        OUTPUT ${RUST_OUTPUT}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/esp32c6/payloads
+        COMMAND ${PROJECT_ROOT}/tools/rust/compile.py
+                ${RUST_SOURCES}
+                --target esp32c6
+                --output ${RUST_OUTPUT}
+        DEPENDS ${RUST_SOURCES}
+        COMMENT "Compiling Rust payload wifi_recon for ESP32-C6"
+    )
+    
+    add_custom_target(wifi_recon_esp32c6 ALL DEPENDS ${RUST_OUTPUT})
+    list(APPEND EXAMPLE_TARGETS wifi_recon_esp32c6)
+endif()
+
+# Add combined payloads (both chips)
+add_c_payload(test_interchip
+              "${CMAKE_CURRENT_SOURCE_DIR}/combined_payloads/test_interchip.c"
+              "${ALL_CHIPS}")
+
+add_cpp_payload(exfiltration
+                "${CMAKE_CURRENT_SOURCE_DIR}/combined_payloads/exfiltration.cpp"
+                "${ALL_CHIPS}")
+
+add_c_payload(multi_vector_exfil
+              "${CMAKE_CURRENT_SOURCE_DIR}/combined_payloads/multi_vector_exfil.c"
+              "${ALL_CHIPS}")
+
+# Add Python payloads if enabled
+if(ENABLE_PYTHON)
+    # Find Python interpreter
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    
+    # Define a function to add Python payload targets
+    function(add_python_payload NAME SOURCE TARGET_CHIPS)
+        foreach(CHIP ${TARGET_CHIPS})
+            set(TARGET_NAME "${NAME}_py_${CHIP}")
+            set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads/${NAME}_${CHIP}.elf")
+            set(PYTHRAN_COMPILER "${PROJECT_ROOT}/tools/pythran/compile.py")
+            
+            # Add custom command to compile Python to ELF
+            add_custom_command(
+                OUTPUT ${OUTPUT_FILE}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads
+                COMMAND ${Python3_EXECUTABLE} ${PYTHRAN_COMPILER} 
+                        ${SOURCE} 
+                        --target ${CHIP} 
+                        --output ${OUTPUT_FILE}
+                DEPENDS ${SOURCE} ${PYTHRAN_COMPILER}
+                COMMENT "Compiling Python payload ${NAME} for ${CHIP}"
+            )
+            
+            # Add custom target
+            add_custom_target(${TARGET_NAME} ALL
+                DEPENDS ${OUTPUT_FILE}
+            )
+            
+            # Add to the list of examples
+            list(APPEND EXAMPLE_TARGETS ${TARGET_NAME})
+        endforeach()
+        
+        # Update the parent scope variable
         set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} PARENT_SCOPE)
     endfunction()
     
-    # Add Nim payloads for each target chip
-    add_nim_payload(os_detect_nim 
-                   ${CMAKE_CURRENT_SOURCE_DIR}/nim_payloads/os_detect.nim 
-                   ch569)
-    
-    add_nim_payload(os_detect_nim 
-                   ${CMAKE_CURRENT_SOURCE_DIR}/nim_payloads/os_detect.nim 
-                   esp32c6)
-    
-    # Additional Nim payloads can be added here
+    # Add Python payloads
+    add_python_payload(os_detect
+                      "${CMAKE_CURRENT_SOURCE_DIR}/python_payloads/os_detect.py"
+                      "${ALL_CHIPS}")
 else()
-    if(NOT NIM_AVAILABLE)
-        message(STATUS "Nim compiler not found, skipping Nim payloads")
-    endif()
+    message(STATUS "Python support disabled. Python payloads will not be built.")
+endif()
+
+# Add Nim payloads if enabled
+if(ENABLE_NIM)
+    # Define a function to add Nim payload targets
+    function(add_nim_payload NAME SOURCE TARGET_CHIPS)
+        foreach(CHIP ${TARGET_CHIPS})
+            set(TARGET_NAME "${NAME}_nim_${CHIP}")
+            set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads/${NAME}_${CHIP}.elf")
+            set(NIM_COMPILER "${PROJECT_ROOT}/tools/nim/compile.py")
+            
+            # Add custom command to compile Nim to ELF
+            add_custom_command(
+                OUTPUT ${OUTPUT_FILE}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CHIP}/payloads
+                COMMAND ${Python3_EXECUTABLE} ${NIM_COMPILER} 
+                        ${SOURCE} 
+                        --target ${CHIP} 
+                        --output ${OUTPUT_FILE}
+                DEPENDS ${SOURCE} ${NIM_COMPILER}
+                COMMENT "Compiling Nim payload ${NAME} for ${CHIP}"
+            )
+            
+            # Add custom target
+            add_custom_target(${TARGET_NAME} ALL
+                DEPENDS ${OUTPUT_FILE}
+            )
+            
+            # Add to the list of examples
+            list(APPEND EXAMPLE_TARGETS ${TARGET_NAME})
+        endforeach()
+        
+        # Update the parent scope variable
+        set(EXAMPLE_TARGETS ${EXAMPLE_TARGETS} PARENT_SCOPE)
+    endfunction()
+    
+    # Add Nim payloads
+    add_nim_payload(os_detect
+                   "${CMAKE_CURRENT_SOURCE_DIR}/nim_payloads/os_detect.nim"
+                   "${ALL_CHIPS}")
+else()
+    message(STATUS "Nim support disabled. Nim payloads will not be built.")
 endif()
 
 # Add a target to build all examples
 add_custom_target(examples ALL DEPENDS ${EXAMPLE_TARGETS})
+
+# Print summary
+message(STATUS "Configured example payloads:")
+foreach(TARGET ${EXAMPLE_TARGETS})
+    message(STATUS "  - ${TARGET}")
+endforeach()

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DuckyCommon VERSION 0.1.0 LANGUAGES C CXX)
+project(DuckyCommon VERSION 0.2.0 LANGUAGES C CXX)
 
 # Include CMake package helper modules
 include(CMakePackageConfigHelpers)
@@ -10,6 +10,9 @@ add_library(ducky_common STATIC
     src/protocol.c
     src/security.c
     src/payload_framework.c
+    src/comm_manager.c
+    src/exfiltration.c
+    src/foothold_common.c
 )
 
 # Include directories
@@ -43,6 +46,46 @@ set_target_properties(ducky_common PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
+# Communication modules library
+add_library(ducky_common_comm STATIC
+    src/comm/spi_slave.c
+)
+
+target_include_directories(ducky_common_comm PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/comm>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/comm>
+)
+
+# Add language binding libraries if enabled
+if(ENABLE_PYTHON)
+    add_library(ducky_common_python INTERFACE)
+    target_include_directories(ducky_common_python INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/python>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/python>
+    )
+    target_link_libraries(ducky_common_python INTERFACE ducky_common)
+endif()
+
+if(ENABLE_NIM)
+    add_library(ducky_common_nim INTERFACE)
+    target_include_directories(ducky_common_nim INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/nim>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/nim>
+    )
+    target_link_libraries(ducky_common_nim INTERFACE ducky_common)
+endif()
+
+if(ENABLE_RUST)
+    add_library(ducky_common_rust INTERFACE)
+    target_include_directories(ducky_common_rust INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/rust>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/rust>
+    )
+    target_link_libraries(ducky_common_rust INTERFACE ducky_common)
+endif()
+
 # Install header files to include directory
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -53,14 +96,48 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/cpp/
         FILES_MATCHING PATTERN "*.hpp"
 )
 
+if(ENABLE_PYTHON)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/python/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/python
+            FILES_MATCHING PATTERN "*.h"
+    )
+endif()
+
+if(ENABLE_NIM)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/nim/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nim
+            FILES_MATCHING PATTERN "*.h"
+    )
+endif()
+
+if(ENABLE_RUST)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/rust/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rust
+            FILES_MATCHING PATTERN "*.h"
+    )
+endif()
+
 # Export our library targets
-install(TARGETS ducky_common ducky_common_cpp
+install(TARGETS ducky_common ducky_common_cpp ducky_common_comm
         EXPORT DuckyCommonTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+# Add language-specific targets to export if enabled
+if(ENABLE_PYTHON)
+    install(TARGETS ducky_common_python EXPORT DuckyCommonTargets)
+endif()
+
+if(ENABLE_NIM)
+    install(TARGETS ducky_common_nim EXPORT DuckyCommonTargets)
+endif()
+
+if(ENABLE_RUST)
+    install(TARGETS ducky_common_rust EXPORT DuckyCommonTargets)
+endif()
 
 # Configure version file
 write_basic_package_version_file(

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(AdvancedRubberDucky VERSION 0.1.0 LANGUAGES C CXX ASM)
+project(USBGoose VERSION 0.2.0 LANGUAGES C CXX ASM)
 
-# Enable verbose output for debugging
+# Enable verbose output for debugging if needed
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Set default build type if not specified
@@ -16,6 +16,46 @@ option(BUILD_TOOLS "Build development tools" ON)
 option(BUILD_EXAMPLES "Build example payloads" ON)
 option(BUILD_DOCS "Build documentation" ON)
 option(BUILD_TESTING "Build and run tests" ON)
+
+# Additional language options
+option(ENABLE_PYTHON "Enable Python payload support" ON)
+option(ENABLE_NIM "Enable Nim payload support" ON)
+option(ENABLE_RUST "Enable Rust payload support" ON)
+
+# Check for required dependencies
+if(ENABLE_PYTHON)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(NOT Python3_FOUND)
+    message(WARNING "Python 3 not found. Python payloads will be disabled.")
+    set(ENABLE_PYTHON OFF)
+  endif()
+endif()
+
+if(ENABLE_NIM)
+  execute_process(
+    COMMAND nim --version
+    RESULT_VARIABLE NIM_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  if(NOT ${NIM_RESULT} EQUAL 0)
+    message(WARNING "Nim compiler not found. Nim payloads will be disabled.")
+    set(ENABLE_NIM OFF)
+  endif()
+endif()
+
+if(ENABLE_RUST)
+  execute_process(
+    COMMAND rustc --version
+    RESULT_VARIABLE RUST_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+  )
+  if(NOT ${RUST_RESULT} EQUAL 0)
+    message(WARNING "Rust compiler not found. Rust payloads will be disabled.")
+    set(ENABLE_RUST OFF)
+  endif()
+endif()
 
 # Include external toolchain files
 if(BUILD_CH569)
@@ -45,7 +85,7 @@ function(add_subproject_target)
   # Parse arguments
   set(options "")
   set(oneValueArgs NAME TOOLCHAIN_FILE)
-  set(multiValueArgs DEPENDS)
+  set(multiValueArgs DEPENDS EXTRA_CMAKE_ARGS)
   cmake_parse_arguments(SUBPROJ "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   
   # Define build directory for this subproject
@@ -69,6 +109,10 @@ function(add_subproject_target)
       -DPARENT_BUILD=ON
       -DPROJECT_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/firmware
       -DBUILD_TESTING=${BUILD_TESTING}
+      -DENABLE_PYTHON=${ENABLE_PYTHON}
+      -DENABLE_NIM=${ENABLE_NIM}
+      -DENABLE_RUST=${ENABLE_RUST}
+      ${SUBPROJ_EXTRA_CMAKE_ARGS}
     INSTALL_COMMAND ""
     BUILD_ALWAYS ON
   )
@@ -119,6 +163,8 @@ if(BUILD_ESP32C6)
     NAME esp32c6
     TOOLCHAIN_FILE ${ESP32C6_TOOLCHAIN_FILE}
     DEPENDS common
+    EXTRA_CMAKE_ARGS
+      -DIDF_PATH=$ENV{IDF_PATH}
   )
 endif()
 
@@ -127,6 +173,10 @@ if(BUILD_TOOLS)
   add_subproject_target(
     NAME tools
     DEPENDS ""
+    EXTRA_CMAKE_ARGS
+      -DENABLE_PYTHON=${ENABLE_PYTHON}
+      -DENABLE_NIM=${ENABLE_NIM}
+      -DENABLE_RUST=${ENABLE_RUST}
   )
 endif()
 
@@ -135,15 +185,25 @@ if(BUILD_EXAMPLES AND BUILD_CH569 AND BUILD_ESP32C6)
   add_subproject_target(
     NAME examples
     DEPENDS ch569 esp32c6
+    EXTRA_CMAKE_ARGS
+      -DENABLE_PYTHON=${ENABLE_PYTHON}
+      -DENABLE_NIM=${ENABLE_NIM}
+      -DENABLE_RUST=${ENABLE_RUST}
   )
 endif()
 
 # Add documentation module
 if(BUILD_DOCS)
-  add_subproject_target(
-    NAME docs
-    DEPENDS ""
-  )
+  find_package(Doxygen QUIET)
+  if(DOXYGEN_FOUND)
+    add_subproject_target(
+      NAME docs
+      DEPENDS ""
+    )
+  else()
+    message(WARNING "Doxygen not found. Documentation will not be built.")
+    set(BUILD_DOCS OFF)
+  endif()
 endif()
 
 # Add custom target to flash both controllers
@@ -184,12 +244,29 @@ if(BUILD_EXAMPLES AND BUILD_CH569 AND BUILD_ESP32C6)
   )
 endif()
 
+# Add target to package release
+add_custom_target(package
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/release
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/ch569 ${CMAKE_BINARY_DIR}/release/ch569
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/esp32c6 ${CMAKE_BINARY_DIR}/release/esp32c6
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/examples ${CMAKE_BINARY_DIR}/release/examples
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/README.md ${CMAKE_BINARY_DIR}/release/
+  COMMAND ${CMAKE_COMMAND} -E tar "cfz" "${CMAKE_BINARY_DIR}/usb-goose-${PROJECT_VERSION}.tar.gz" "${CMAKE_BINARY_DIR}/release"
+  COMMENT "Creating release package"
+)
+
 # Print build configuration
-message(STATUS "Build configuration:")
-message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  Building CH569 firmware: ${BUILD_CH569}")
-message(STATUS "  Building ESP32-C6 firmware: ${BUILD_ESP32C6}")
-message(STATUS "  Building tools: ${BUILD_TOOLS}")
-message(STATUS "  Building examples: ${BUILD_EXAMPLES}")
-message(STATUS "  Building docs: ${BUILD_DOCS}")
-message(STATUS "  Building tests: ${BUILD_TESTING}")
+message(STATUS "=====================================")
+message(STATUS "USB Goose Build Configuration:")
+message(STATUS "=====================================")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Building CH569 firmware: ${BUILD_CH569}")
+message(STATUS "Building ESP32-C6 firmware: ${BUILD_ESP32C6}")
+message(STATUS "Building tools: ${BUILD_TOOLS}")
+message(STATUS "Building examples: ${BUILD_EXAMPLES}")
+message(STATUS "Building docs: ${BUILD_DOCS}")
+message(STATUS "Building tests: ${BUILD_TESTING}")
+message(STATUS "Python support: ${ENABLE_PYTHON}")
+message(STATUS "Nim support: ${ENABLE_NIM}")
+message(STATUS "Rust support: ${ENABLE_RUST}")
+message(STATUS "=====================================")
