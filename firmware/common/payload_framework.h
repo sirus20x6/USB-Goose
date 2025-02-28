@@ -1,5 +1,5 @@
 /**
- * payload_framework.h - Core framework header for Advanced USB Rubber Ducky
+ * payload_framework.h - Core framework header for  USB Goose
  * 
  * This header defines the common interfaces for the payload framework
  * that works consistently across both CH569 and ESP32-C6 chips.
