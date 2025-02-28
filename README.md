@@ -1,4 +1,4 @@
-# USB Goose: Dual-Chip Architecture with USB 3.0 and Multi-Protocol Wireless
+# USB Goose: USB 3.0 and Multi-Protocol Wireless Pentesting Tool Inspired By The USB Rubber Ducky
 
 ## Project Overview
 
